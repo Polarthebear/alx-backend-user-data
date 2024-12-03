@@ -3,13 +3,15 @@
 Route module for the API
 """
 from os import getenv
-from api.v1.views import app_views
-from api.v1.auth.auth import Auth
-from api.v1.auth.basic_auth import BasicAuth
 from flask import Flask, jsonify, abort, request
 from flask_cors import (CORS, cross_origin)
 import os
-
+from api.vi.views import app_views
+from api.v1.auth.auth import Auth
+from api.v1.auth.basic_auth import BasicAuth
+from api.v1.auth.session_auth import SessionAuth
+from api.v1.auth.session_exp_auth SessionDBAuth
+from api.v1.auth.session_exp_auth import SessionExpAuth
 
 
 app = Flask(__name__)
@@ -21,12 +23,17 @@ if auth_type == 'auth':
     auth = Auth()
 if auth_type == 'basic-auth':
     auth = BasicAuth()
+if auth_type == 'session_auth':
+    auth = SessionAuth()
+if auth_type == 'session_exp_auth':
+    auth = SessionExpAuth()
+if auth_type == 'session_db_auth':
+    auth = SessionDBAuth()
 
 
 @app.errorhandler(404)
 def not_found(error) -> str:
-    """ Not found handler
-    """
+    """ Not found handler"""
     return jsonify({"error": "Not found"}), 404
 
 
@@ -50,14 +57,16 @@ def authenticate_user():
             '/api/v1/status/',
             '/api/v1/unauthorized/',
             '/api/v1/forbidden/',
+            '/api/v1/auth_session/login/',
         ]
         if auth.require_auth(request.path, excluded_paths):
-            auth_header = auth.authorization_header(request)
             user = auth.current_user(request)
-            if auth_header is None:
+            if auth.authorization_header(request) is None and \
+                    auth.session_cookie(request) is None:
                 abort(401)
             if user is None:
                 abort(403)
+            request.current_user = user
 
 
 if __name__ == "__main__":
